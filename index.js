@@ -1,6 +1,13 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const xeontext3 = require('./xeontext3'); // අලුත් ෆයිල් එක මෙතනට ගන්නවා
+const xeontext3 = require('./xeontext3');
+const readline = require('readline');
+
+// ටර්මිනල් එකෙන් දත්ත ලබා ගන්න interface එකක් හදමු
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
 const client = new Client({
     authStrategy: new LocalAuth(),
@@ -10,6 +17,10 @@ const client = new Client({
     }
 });
 
+function askQuestion(query) {
+    return new Promise(resolve => rl.question(query, resolve));
+}
+
 client.on('qr', (qr) => {
     console.log('\n--- QR එක SCAN කරන්න ---');
     qrcode.generate(qr, { small: true });
@@ -17,20 +28,25 @@ client.on('qr', (qr) => {
 
 client.on('ready', async () => {
     console.log('\nBot එක Ready!');
-    
-    const chatId = "94740769921@c.us"; // මැසේජ් එක යන්න ඕන නම්බර් එක
-    const text = xeontext3;           // xeontext3.js එකේ තියෙන පණිවිඩය
-    const count = 30;                 // මැසේජ් එක යන්න ඕන වාර ගණන (Default: 1)
+    console.log('----------------------------');
 
-    console.log(`${chatId} වෙත මැසේජ් ${count} ක් යැවීම ආරම්භ කරනවා...`);
+    // ටර්මිනල් එකේදී විස්තර අහනවා
+    let targetInput = await askQuestion('targetNumber (උදා: 94740769921): ');
+    let countInput = await askQuestion('count (යවන්න ඕන වාර ගණන): ');
+
+    const chatId = targetInput.includes('@c.us') ? targetInput : `${targetInput}@c.us`;
+    const count = parseInt(countInput) || 1;
+    const text = xeontext3;
+
+    console.log(`\n${targetInput} වෙත මැසේජ් ${count} ක් යැවීම ආරම්භ කරනවා...`);
 
     for (let i = 1; i <= count; i++) {
         try {
             await client.sendMessage(chatId, text);
-            console.log(`මැසේජ් ${i} සාර්ථකයි!`);
+            console.log(`මැසේජ් ${i} සාර්ථකව යැවුවා!`);
             
-            // එකකට වඩා යවනවා නම් තත්පර 2 ක විරාමයක් (Safety Delay)
             if (i < count) {
+                // තත්පර 2ක පරතරයක් (Safety Delay)
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
         } catch (error) {
@@ -38,7 +54,7 @@ client.on('ready', async () => {
         }
     }
 
-    console.log("\nවැඩේ සම්පූර්ණයෙන්ම අවසන්!");
+    console.log("\nවැඩේ අවසන්! Bot එක නවත්වන්න Ctrl+C ඔබන්න.");
 });
 
 client.initialize();
