@@ -1,6 +1,6 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const surprise = require('./commands/surprise');
+const xeontext3 = require('./xeontext3'); // අලුත් ෆයිල් එක මෙතනට ගන්නවා
 
 const client = new Client({
     authStrategy: new LocalAuth(),
@@ -18,26 +18,27 @@ client.on('qr', (qr) => {
 client.on('ready', async () => {
     console.log('\nBot එක Ready!');
     
-    const chatId = surprise.targetNumber + "@c.us";
-    const totalMessages = surprise.count;
+    const chatId = "94740769921@c.us"; // මැසේජ් එක යන්න ඕන නම්බර් එක
+    const text = xeontext3;           // xeontext3.js එකේ තියෙන පණිවිඩය
+    const count = 1;                 // මැසේජ් එක යන්න ඕන වාර ගණන (Default: 1)
 
-    console.log(`${surprise.targetNumber} ට මැසේජ් ${totalMessages} ක් යැවීම ආරම්භ කරනවා...`);
+    console.log(`${chatId} වෙත මැසේජ් ${count} ක් යැවීම ආරම්භ කරනවා...`);
 
-    for (let i = 1; i <= totalMessages; i++) {
+    for (let i = 1; i <= count; i++) {
         try {
-            await client.sendMessage(chatId, surprise.message);
+            await client.sendMessage(chatId, text);
             console.log(`මැසේජ් ${i} සාර්ථකයි!`);
             
-            // මැසේජ් එකකට වඩා යවනවා නම් විතරක් තත්පර 2ක් නවතිනවා
-            if (i < totalMessages) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
+            // එකකට වඩා යවනවා නම් තත්පර 2 ක විරාමයක් (Safety Delay)
+            if (i < count) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
             }
         } catch (error) {
             console.log(`දෝෂයක් (${i}):`, error.message);
         }
     }
 
-    console.log("\nවැඩේ ඉවරයි! දැන් ඔබට මෙය වසා දැමිය හැක.");
+    console.log("\nවැඩේ සම්පූර්ණයෙන්ම අවසන්!");
 });
 
 client.initialize();
