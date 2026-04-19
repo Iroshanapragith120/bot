@@ -9,7 +9,7 @@ const { handleMessageSend } = require('./sendmessage/msgLogic');
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const askQuestion = (query) => new Promise((resolve) => rl.question(query, resolve));
 
-// --- GLOBAL OWNERS LIST ---
+// --- GLOBAL OWNERS ---
 global.owners = ['94741433513@c.us']; 
 
 const client = new Client({
@@ -37,11 +37,10 @@ client.on('message_create', async (msg) => {
         const args = text.split(' ');
         const command = args[0].toLowerCase();
 
-        // OWNER CHECK (මෙතනයි ඇඩ් කරන අයට වැඩ නොකරන ප්‍රශ්නය තිබුණේ)
+        // OWNER CHECK
         const isOwner = msg.fromMe || global.owners.includes(sender);
         if (!isOwner) return;
 
-        // .addowner කමාන්ඩ් එක
         if (command === '.addowner') {
             let num = args[1] ? args[1].replace('+', '').replace(/\s/g, '') : null;
             let newOwner = num ? `${num}@c.us` : null;
@@ -52,14 +51,12 @@ client.on('message_create', async (msg) => {
             return;
         }
 
-        // .menu කමාන්ඩ් එක
         if (command === '.menu' || command === 'menu') {
             userStates[chatID] = { step: 'main' };
             await handleMainMenu(client, chatID, userStates);
             return;
         }
 
-        // ලොජික් එකට යොමු කිරීම
         if (userStates[chatID]) {
             await handleMessageSend(client, chatID, text, userStates);
         }
@@ -73,20 +70,20 @@ async function startBot() {
 
     if (choice === '2') {
         const phoneNumber = await askQuestion('\nනම්බර් එක (947xxxxxxxx): ');
-        client.on('qr', () => {}); // Pairing වලදී QR ignore කරන්න
+        client.on('qr', () => {}); 
         client.initialize();
         
-        // පයිරින් කෝඩ් එකට තත්පර 12ක් දෙන්න (Cloud Shell එකට ලේසි වෙන්න)
+        // පයිරින් කෝඩ් එක ඉල්ලන්න තත්පර 15ක් දෙනවා
         setTimeout(async () => {
             try {
                 console.log("🔑 පයිරින් කෝඩ් එක ඉල්ලමින් පවතී...");
                 const code = await client.requestPairingCode(phoneNumber.replace(/\s/g, ''));
                 console.log(`\n🔥 Pairing Code: ${code}\n`);
-            } catch (err) { console.log("❌ Pairing error. Clean කරලා ආයේ රන් කරන්න."); }
-        }, 12000);
+            } catch (err) { console.log("❌ Pairing error. Restart කරන්න."); }
+        }, 15000);
     } else {
         client.on('qr', (qr) => {
-            console.log('\n✅ QR Code එක ලැබුණා:');
+            console.log('\n✅ QR Code ලැබුණා:');
             qrcode.generate(qr, { small: true });
         });
         client.initialize();
