@@ -1,9 +1,8 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const xeontext3 = require('./xeontext3');
+const cha = require('./cha'); // cha.js එකෙන් මැසේජ් එක ගන්නවා
 const readline = require('readline');
 
-// ටර්මිනල් එකෙන් දත්ත ලබා ගන්න interface එකක් හදමු
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -30,31 +29,42 @@ client.on('ready', async () => {
     console.log('\nBot එක Ready!');
     console.log('----------------------------');
 
-    // ටර්මිනල් එකේදී විස්තර අහනවා
-    let targetInput = await askQuestion('targetNumber (උදා: 94740769921): ');
-    let countInput = await askQuestion('count (යවන්න ඕන වාර ගණන): ');
-
-    const chatId = targetInput.includes('@c.us') ? targetInput : `${targetInput}@c.us`;
-    const count = parseInt(countInput) || 1;
-    const text = cha;
-
-    console.log(`\n${targetInput} වෙත මැසේජ් ${count} ක් යැවීම ආරම්භ කරනවා...`);
-
-    for (let i = 1; i <= count; i++) {
-        try {
-            await client.sendMessage(chatId, text);
-            console.log(`මැසේජ් ${i} සාර්ථකව යැවුවා!`);
-            
-            if (i < count) {
-                // තත්පර 2ක පරතරයක් (Safety Delay)
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-        } catch (error) {
-            console.log(`දෝෂයක් (${i}):`, error.message);
+    // මැසේජ් යැවීමේ ක්‍රියාවලිය දිගටම කරගෙන යාමට loop එකක් පාවිච්චි කරමු
+    while (true) {
+        let targetInput = await askQuestion('\ntargetNumber (නතර කිරීමට "exit" ලෙස ටයිප් කරන්න): ');
+        
+        // "exit" කියලා ගැහුවොත් ලූප් එකෙන් අයින් වෙනවා
+        if (targetInput.toLowerCase() === 'exit') {
+            console.log("Bot එක නවත්වනවා. සුබ දවසක්!");
+            process.exit();
         }
-    }
 
-    console.log("\nවැඩේ අවසන්! Bot එක නවත්වන්න Ctrl+C ඔබන්න.");
+        let countInput = await askQuestion('count (වාර ගණන): ');
+
+        const chatId = targetInput.includes('@c.us') ? targetInput : `${targetInput}@c.us`;
+        const count = parseInt(countInput) || 1;
+        const text = cha; // cha.js එකේ තියෙන මැසේජ් එක
+
+        console.log(`\n${targetInput} වෙත මැසේජ් ${count} ක් යැවීම ආරම්භ කරනවා...`);
+
+        for (let i = 1; i <= count; i++) {
+            try {
+                await client.sendMessage(chatId, text);
+                console.log(`මැසේජ් ${i} සාර්ථකයි!`);
+                
+                if (i < count) {
+                    // තත්පර 2ක පරතරයක් (WhatsApp Block නොවීමට)
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            } catch (error) {
+                console.log(`දෝෂයක් (${i}):`, error.message);
+            }
+        }
+
+        console.log("\nමැසේජ් යැවීම අවසන්!");
+        console.log("----------------------------");
+        // මෙතනින් පස්සේ ආයෙත් මුලට ගිහින් targetNumber එක අහනවා.
+    }
 });
 
 client.initialize();
