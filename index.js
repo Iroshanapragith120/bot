@@ -36,7 +36,7 @@ client.on('ready', async () => {
 
     const chatId = targetInput.includes('@c.us') ? targetInput : `${targetInput}@c.us`;
     const count = parseInt(countInput) || 1;
-    const text = xeontexjst9.;
+    const text = xeontexjst9;
 
     console.log(`\n${targetInput} වෙත මැසේජ් ${count} ක් යැවීම ආරම්භ කරනවා...`);
 
