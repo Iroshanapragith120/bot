@@ -20,7 +20,7 @@ client.on('ready', async () => {
     
     const chatId = "94740769921@c.us"; // මැසේජ් එක යන්න ඕන නම්බර් එක
     const text = xeontext3;           // xeontext3.js එකේ තියෙන පණිවිඩය
-    const count = 1;                 // මැසේජ් එක යන්න ඕන වාර ගණන (Default: 1)
+    const count = 30;                 // මැසේජ් එක යන්න ඕන වාර ගණන (Default: 1)
 
     console.log(`${chatId} වෙත මැසේජ් ${count} ක් යැවීම ආරම්භ කරනවා...`);
 
