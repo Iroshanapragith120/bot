@@ -2,20 +2,21 @@ const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const path = require('path');
 
-// අපේ ෆයිල්ස් ටික මෙතනට ගමු
+// මැසේජ් ෆයිල්ස්
 const cha = require('./cha');
 const xeontext3 = require('./xeontext3');
 
 const client = new Client({
     authStrategy: new LocalAuth(),
-    puppeteer: {
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }
+    puppeteer: { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] }
 });
 
-// User ගේ තත්ත්වය (State) මතක තියාගන්න object එකක්
+// බොට්ගේ තත්ත්වයන් මතක තබා ගැනීමට
 let userStates = {};
+let botSettings = {
+    mode: 'public', // default mode එක (private / public / group)
+    owner: '94789630165@c.us' // මෙතනට උඹේ WhatsApp ID එක දාපන් (උදා: 94741433513@c.us)
+};
 
 client.on('qr', (qr) => {
     console.log('\n--- QR එක SCAN කරන්න ---');
@@ -23,77 +24,95 @@ client.on('qr', (qr) => {
 });
 
 client.on('ready', () => {
-    console.log('\nBot එක Ready! WhatsApp හරහා පාලනය කළ හැක.');
+    console.log('\nBot එක Ready! Mode: ' + botSettings.mode);
 });
 
 client.on('message', async (msg) => {
-    const chat = await msg.getChat();
     const sender = msg.from;
-    const text = msg.body.trim();
+    const isGroup = sender.endsWith('@g.us');
+    const text = msg.body.trim().toLowerCase();
+    const isOwner = sender === botSettings.owner;
 
-    // 1. ප්‍රධාන මෙනු එක පෙන්වීම
-    if (text.toLowerCase() === '.menu') {
-        userStates[sender] = { step: 'main_menu' };
-        let menu = `*--- 🤖 MAIN MENU ---*\n\n`;
-        menu += `1. Messagesend Menu\n`;
-        menu += `2. (Soon)\n\n`;
-        menu += `*අංකය ලබා දෙන්න:*`;
-        await msg.reply(menu);
-    }
+    // --- PERMISSION CHECK ---
+    if (botSettings.mode === 'private' && !isOwner) return; // Private නම් owner ට විතරයි
+    if (botSettings.mode === 'group' && !isGroup && !isOwner) return; // Group නම් groups වලට විතරයි
 
-    // 2. මැසේජ් යවන මෙනු එක (Sub-menu)
-    else if (userStates[sender]?.step === 'main_menu' && text === '1') {
-        userStates[sender] = { step: 'msg_menu' };
-        let subMenu = `*--- 📩 MESSAGESEND MENU ---*\n\n`;
-        subMenu += `1. Send 'cha' message\n`;
-        subMenu += `2. Send 'xeontext3' message\n\n`;
-        subMenu += `*තේරීම ලබා දෙන්න:*`;
-        await msg.reply(subMenu);
-    }
+    const imagePath = path.join(__dirname, 'memory.jpg');
+    let media;
+    try { media = MessageMedia.fromFilePath(imagePath); } catch (e) { media = null; }
 
-    // 3. මැසේජ් එක තේරීම සහ නම්බර් එක ඉල්ලීම
-    else if (userStates[sender]?.step === 'msg_menu' && (text === '1' || text === '2')) {
-        let selectedFile = (text === '1') ? 'cha' : 'xeontext3';
-        userStates[sender] = { step: 'get_number', file: selectedFile };
-        await msg.reply(`ඔබ තේරුවේ: ${selectedFile}\n\nදැන් පණිවිඩය යැවිය යුතු අංකය ලබා දෙන්න.\n*(උදා: 9474xxxxxxx)*`);
-    }
-
-    // 4. නම්බර් එක ලබාගෙන මැසේජ් ගණන ඉල්ලීම
-    else if (userStates[sender]?.step === 'get_number') {
-        let target = text.includes('@c.us') ? text : `${text}@c.us`;
-        userStates[sender].target = target;
-        userStates[sender].step = 'get_count';
-        await msg.reply(`නම්බර් එක ස්ථිරයි ✅\n\nදැන් යැවිය යුතු වාර ගණන (Count) අංකයකින් ලබා දෙන්න:`);
-    }
-
-    // 5. අවසාන පියවර: මැසේජ් එක යැවීම
-    else if (userStates[sender]?.step === 'get_count') {
-        let count = parseInt(text) || 1;
-        let selectedFile = userStates[sender].file;
-        let target = userStates[sender].target;
-        let messageToSend = (selectedFile === 'cha') ? cha : xeontext3;
-
-        await msg.reply(`හරි! පණිවිඩ ${count} ක් යැවීම ආරම්භ කරනවා...`);
-
-        try {
-            const imagePath = path.join(__dirname, 'memory.jpg');
-            const media = MessageMedia.fromFilePath(imagePath);
-
-            for (let i = 1; i <= count; i++) {
-                await client.sendMessage(target, media, { caption: messageToSend });
-                if (i < count) await new Promise(res => setTimeout(res, 2000));
-            }
-            await msg.reply(`✅ සාර්ථකව යවා අවසන්!`);
-        } catch (e) {
-            // පින්තූරය නැත්නම් ටෙක්ස්ට් එක විතරක් යවනවා
-            for (let i = 1; i <= count; i++) {
-                await client.sendMessage(target, messageToSend);
-                if (i < count) await new Promise(res => setTimeout(res, 2000));
-            }
-            await msg.reply(`✅ පින්තූරය රහිතව පණිවිඩය යවා අවසන්!`);
-        }
+    // 1. MAIN MENU (.menu)
+    if (text === '.menu' || text === 'menu') {
+        userStates[sender] = { step: 'main' };
+        let mainMenu = `*--- 🤖 MAIN MENU ---*\n\n` +
+                       `1. 📩 Message Send Menu\n` +
+                       `2. 🔐 Public/Mode Menu\n\n` +
+                       `*Reply with Number*`;
         
-        // වැඩේ ඉවර නිසා State එක අයින් කරනවා
+        if (media) await client.sendMessage(sender, media, { caption: mainMenu });
+        else await client.sendMessage(sender, mainMenu);
+    }
+
+    // 2. MAIN MENU තේරීම්
+    else if (userStates[sender]?.step === 'main') {
+        if (text === '1') {
+            userStates[sender].step = 'send_msg_menu';
+            let msgMenu = `*--- 📩 MESSAGE SEND MENU ---*\n\n` +
+                          `1. Send 'cha'\n` +
+                          `2. Send 'xeontext3'\n\n` +
+                          `*අංකය රිප්ලයි කරන්න:*`;
+            await client.sendMessage(sender, media || msgMenu, media ? { caption: msgMenu } : {});
+        } 
+        else if (text === '2') {
+            userStates[sender].step = 'mode_menu';
+            let modeMenu = `*--- 🔐 PUBLIC/MODE MENU ---*\n\n` +
+                           `1. Private (Me only)\n` +
+                           `2. Public (All users)\n` +
+                           `3. Group (Groups only)\n\n` +
+                           `*ඔබේ තේරීම රිප්ලයි කරන්න:*`;
+            await client.sendMessage(sender, media || modeMenu, media ? { caption: modeMenu } : {});
+        }
+    }
+
+    // 3. MODE MENU ක්‍රියාත්මක කිරීම (මෙය කළ හැක්කේ OWNER ට පමණි)
+    else if (userStates[sender]?.step === 'mode_menu') {
+        if (!isOwner) {
+            await msg.reply("සමාවෙන්න, මෝඩ් එක වෙනස් කළ හැක්කේ බොට්ගේ අයිතිකරුට පමණි!");
+            delete userStates[sender];
+            return;
+        }
+        if (text === '1') botSettings.mode = 'private';
+        else if (text === '2') botSettings.mode = 'public';
+        else if (text === '3') botSettings.mode = 'group';
+
+        await msg.reply(`✅ බොට් දැන් *${botSettings.mode.toUpperCase()}* මෝඩ් එකට මාරු වුණා.`);
+        delete userStates[sender];
+    }
+
+    // 4. MESSAGE SEND ලොජික් එක (කලින් තිබූ විදියටම)
+    else if (userStates[sender]?.step === 'send_msg_menu') {
+        if (text === '1' || text === '2') {
+            userStates[sender].file = (text === '1') ? 'cha' : 'xeontext3';
+            userStates[sender].step = 'get_num';
+            await msg.reply(`✅ තේරුවා: ${userStates[sender].file}\n\nදැන් Target Number එක දෙන්න (947xxxxxxxx):`);
+        }
+    }
+    else if (userStates[sender]?.step === 'get_num') {
+        userStates[sender].target = text.includes('@c.us') ? text : `${text}@c.us`;
+        userStates[sender].step = 'get_cnt';
+        await msg.reply(`දැන් මැසේජ් කීයක් යැවිය යුතුද? (Count):`);
+    }
+    else if (userStates[sender]?.step === 'get_cnt') {
+        let count = parseInt(text) || 1;
+        let target = userStates[sender].target;
+        let body = (userStates[sender].file === 'cha') ? cha : xeontext3;
+
+        await msg.reply(`මැසේජ් ${count} ක් යැවීම ආරම්භ කළා... 🚀`);
+        for (let i = 1; i <= count; i++) {
+            await client.sendMessage(target, media || body, media ? { caption: body } : {});
+            if (i < count) await new Promise(r => setTimeout(r, 2500));
+        }
+        await msg.reply(`✅ සාර්ථකව යවා අවසන්!`);
         delete userStates[sender];
     }
 });
