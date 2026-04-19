@@ -6,9 +6,6 @@
 
 ### 📸 Preview
 ![Bot Preview](image/README.jpg)
-
----
-
 ### 🛠️Installation
 
 1.  Repository එක Clone කරන්න:
