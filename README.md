@@ -5,7 +5,7 @@
 ---
 
 ### 📸 Preview
-![Bot Preview](README.jpg)
+![Bot Preview](image/README.jpg)
 
 ---
 
