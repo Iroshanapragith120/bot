@@ -5,6 +5,9 @@
 ---
 <img src="image/README.jpg" width="300" alt="Bot Preview">
 
+<p align="center">
+  <img src="memory.jpg" width="300" alt="Bot Preview">
+</p>
 1.  Repository එක Clone කරන්න:
     ```bash
     git clone [https://github.com/Iroshanapragith120/bot.git](https://github.com/Iroshanapragith120/bot.git)
