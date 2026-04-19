@@ -1,2 +1,2 @@
-const xeontext3 = `i love you `
-exports.xeontext3 = xeontext3
+const xeontext3 = "i love you";
+module.exports = xeontext3;
