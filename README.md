@@ -3,10 +3,7 @@
 
 
 ---
-
-### 📸 Preview
-![Bot Preview](image/README.jpg)
-### 🛠️Installation
+<img src="image/README.jpg" width="300" alt="Bot Preview">
 
 1.  Repository එක Clone කරන්න:
     ```bash
