@@ -3,7 +3,6 @@
 
 
 ---
-<img src="image/README.jpg" width="300" alt="Bot Preview">
 
 <p align="center">
   <img src="image/README.jpg" width="300" alt="Bot Preview">
