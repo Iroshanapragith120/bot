@@ -30,7 +30,7 @@ client.on('ready', async () => {
             
             // මැසේජ් එකකට වඩා යවනවා නම් විතරක් තත්පර 2ක් නවතිනවා
             if (i < totalMessages) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         } catch (error) {
             console.log(`දෝෂයක් (${i}):`, error.message);
