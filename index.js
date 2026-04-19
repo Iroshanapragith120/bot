@@ -1,7 +1,8 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const cha = require('./cha'); // cha.js එකෙන් මැසේජ් එක ගන්නවා
+const cha = require('./cha'); // විස්තරය තියෙන ෆයිල් එක
 const readline = require('readline');
+const path = require('path'); // ෆයිල් එක තියෙන තැන හොයාගන්න
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -26,44 +27,38 @@ client.on('qr', (qr) => {
 });
 
 client.on('ready', async () => {
-    console.log('\nBot එක Ready!');
-    console.log('----------------------------');
+    console.log('\nBot එක Ready! (Memory Mode ❤️)');
+    console.log('------------------------------------------');
 
-    // මැසේජ් යැවීමේ ක්‍රියාවලිය දිගටම කරගෙන යාමට loop එකක් පාවිච්චි කරමු
     while (true) {
-        let targetInput = await askQuestion('\ntargetNumber (නතර කිරීමට "exit" ලෙස ටයිප් කරන්න): ');
-        
-        // "exit" කියලා ගැහුවොත් ලූප් එකෙන් අයින් වෙනවා
-        if (targetInput.toLowerCase() === 'exit') {
-            console.log("Bot එක නවත්වනවා. සුබ දවසක්!");
-            process.exit();
-        }
+        let targetInput = await askQuestion('\ntargetNumber (නැවත්වීමට "exit"): ');
+        if (targetInput.toLowerCase() === 'exit') process.exit(0);
 
-        let countInput = await askQuestion('count (වාර ගණන): ');
-
-        const chatId = targetInput.includes('@c.us') ? targetInput : `${targetInput}@c.us`;
+        let countInput = await askQuestion('count: ');
         const count = parseInt(countInput) || 1;
-        const text = cha; // cha.js එකේ තියෙන මැසේජ් එක
+        const chatId = targetInput.includes('@c.us') ? targetInput : `${targetInput}@c.us`;
 
-        console.log(`\n${targetInput} වෙත මැසේජ් ${count} ක් යැවීම ආරම්භ කරනවා...`);
+        console.log(`\nමැසේජ් යැවීම ආරම්භ කළා...`);
 
-        for (let i = 1; i <= count; i++) {
-            try {
-                await client.sendMessage(chatId, text);
-                console.log(`මැසේජ් ${i} සාර්ථකයි!`);
+        try {
+            // --- මෙතන 'memory.jpg' වෙනුවට ඔයාගේ පින්තූරයේ නම හරියටම දෙන්න ---
+            const imagePath = path.join(__dirname, 'memory.jpg');
+            const media = MessageMedia.fromFilePath(imagePath);
+
+            for (let i = 1; i <= count; i++) {
+                await client.sendMessage(chatId, media, { caption: cha });
+                console.log(`මතකය යැවුවා (${i}) - සාර්ථකයි!`);
                 
                 if (i < count) {
-                    // තත්පර 2ක පරතරයක් (WhatsApp Block නොවීමට)
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                 }
-            } catch (error) {
-                console.log(`දෝෂයක් (${i}):`, error.message);
             }
+            console.log("\nමෙම නම්බර් එකට යැවීම අවසන්.");
+        } catch (error) {
+            console.log(`Error: පින්තූරය සොයාගත නොහැක! memory.jpg ෆයිල් එක ෆෝල්ඩර් එකේ තියෙනවද බලන්න.`);
         }
-
-        console.log("\nමැසේජ් යැවීම අවසන්!");
-        console.log("----------------------------");
-        // මෙතනින් පස්සේ ආයෙත් මුලට ගිහින් targetNumber එක අහනවා.
+        
+        console.log("------------------------------------------");
     }
 });
 
