@@ -1,125 +1,72 @@
-const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 const path = require('path');
+const readline = require('readline');
 
-// මැසේජ් ෆයිල්ස්
-const cha = require('./cha');
-const xeontext3 = require('./xeontext3');
+// වෙනම හදපු ලොජික් ෆයිල්ස් මෙතනට ගන්නවා
+const { handleMainMenu } = require('./mainmenu/mainLogic');
+const { handleMessageSend } = require('./sendmessage/msgLogic');
+
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const askQuestion = (query) => new Promise((resolve) => rl.question(query, resolve));
 
 const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] }
+    authStrategy: new LocalAuth({ dataPath: './setting' }),
+    puppeteer: { 
+        headless: true, 
+        args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+    }
 });
 
 let userStates = {};
-
-// --- මූලික Owner ලැයිස්තුව (උඹේ නම්බර් එක මෙතන දාපන්) ---
-let owners = ['947xxxxxxxx@c.us']; 
-
-client.on('qr', (qr) => {
-    console.log('\n--- QR එක SCAN කරන්න ---');
-    qrcode.generate(qr, { small: true });
-});
+let owners = ['947xxxxxxxx@c.us']; // උඹේ නම්බර් එක මෙතනට දාපන්
 
 client.on('ready', () => {
-    console.log('\nBot එක Ready! Owners ලට පාලනය කළ හැක.');
+    console.log('\n✅ බොට් සාර්ථකව Ready වුණා!');
 });
 
 client.on('message_create', async (msg) => {
     const sender = msg.from;
     const text = msg.body.trim();
-    const args = text.split(' ');
-    const command = args[0].toLowerCase();
-
-    // බොට් මැසේජ් එකක් යවද්දී ඒක ආයෙත් කියවලා රිප්ලයි කරන එක නතර කරන්න
-    if (msg.fromMe && text.startsWith('✅')) return;
-
-    // --- OWNER CHECK ---
     const isOwner = msg.fromMe || owners.includes(sender);
-    if (!isOwner) return;
 
-    const imagePath = path.join(__dirname, 'image', 'README.jpg');
-    let media;
-    try { media = MessageMedia.fromFilePath(imagePath); } catch (e) { media = null; }
+    // Owner කෙනෙක් නෙවේ නම් හෝ බොට්ම යවන Confirm මැසේජ් එකක් නම් නතර කරනවා
+    if (!isOwner || (msg.fromMe && text.startsWith('✅'))) return;
 
-    // --- OWNER කළමනාකරණ විධාන (COMMANDS) ---
+    // 1. .menu හෝ menu කියලා ගැහුවම Main Menu ලොජික් එකට යවනවා
+    if (text.toLowerCase() === '.menu' || text.toLowerCase() === 'menu') {
+        await handleMainMenu(client, sender, userStates);
+    }
 
-    // 1. අලුත් Owner කෙනෙක් ඇඩ් කිරීම (.addowner 9474xxxxxxx)
-    if (command === '.addowner') {
-        let newOwner = args[1] ? `${args[1]}@c.us` : null;
-        if (newOwner && !owners.includes(newOwner)) {
-            owners.push(newOwner);
-            await client.sendMessage(sender, `✅ ${args[1]} දැන් Owner කෙනෙක් ලෙස ඇඩ් කළා!`);
-        } else {
-            await client.sendMessage(sender, `❌ නිවැරදි අංකය ලබා දෙන්න හෝ ඔහු දැනටමත් ඇඩ් කර ඇත.`);
+    // 2. දැනටමත් මෙනු එකක ඉන්නවා නම් ඒ ඒ ලොජික් වලට යොමු කරනවා
+    else if (userStates[sender]) {
+        // Main Menu එකේ 1 එබුවොත් හෝ දැනටමත් Message Send මෙනු එකේ ප්‍රොසෙස් එකේ ඉන්නවා නම්
+        if ((userStates[sender].step === 'main' && text === '1') || 
+            userStates[sender].step.startsWith('msg_') || 
+            userStates[sender].step === 'get_num' || 
+            userStates[sender].step === 'get_cnt') {
+            
+            // මුලින්ම පියවර මාරු කරනවා sendmessage ලොජික් එකට ගැලපෙන්න
+            if (userStates[sender].step === 'main') userStates[sender].step = 'send_msg_menu_start';
+            
+            await handleMessageSend(client, sender, text, userStates);
         }
-        return;
-    }
-
-    // 2. Owner කෙනෙක් අයින් කිරීම (.rmowner 9474xxxxxxx)
-    if (command === '.rmowner') {
-        let toRemove = args[1] ? `${args[1]}@c.us` : null;
-        if (toRemove && owners.includes(toRemove)) {
-            owners = owners.filter(o => o !== toRemove);
-            await client.sendMessage(sender, `✅ ${args[1]} ව Owner ලැයිස්තුවෙන් ඉවත් කළා!`);
-        } else {
-            await client.sendMessage(sender, `❌ අංකය සොයාගත නොහැක.`);
-        }
-        return;
-    }
-
-    // 3. දැනට ඉන්න අය බැලීම (.ownerlist)
-    if (command === '.ownerlist') {
-        let list = `*--- 👥 CURRENT OWNERS ---*\n\n` + owners.map(o => `• ${o.split('@')[0]}`).join('\n');
-        await client.sendMessage(sender, list);
-        return;
-    }
-
-    // --- කලින් තිබූ බොට් මෙනූ එක ---
-
-    if (command === '.menu' || command === 'menu') {
-        userStates[sender] = { step: 'main' };
-        let mainMenu = `*--- 🤖 OWNER MENU ---*\n\n` +
-                       `1. 📩 Message Send Menu\n` +
-                       `*Reply with Number*`;
-        if (media) await client.sendMessage(sender, media, { caption: mainMenu });
-        else await client.sendMessage(sender, mainMenu);
-    }
-
-    else if (userStates[sender]?.step === 'main' && text === '1') {
-        userStates[sender].step = 'send_msg_menu';
-        let msgMenu = `*--- 📩 MESSAGE SEND MENU ---*\n\n` +
-                      `1. Send 'cha'\n` +
-                      `2. Send 'xeontext3'\n\n` +
-                      `*අංකය රිප්ලයි කරන්න:*`;
-        await client.sendMessage(sender, media || msgMenu, media ? { caption: msgMenu } : {});
-    }
-
-    else if (userStates[sender]?.step === 'send_msg_menu' && (text === '1' || text === '2')) {
-        userStates[sender].file = (text === '1') ? 'cha' : 'xeontext3';
-        userStates[sender].step = 'get_num';
-        await client.sendMessage(sender, `✅ තේරුවා: ${userStates[sender].file}\n\nTarget Number එක දෙන්න (947xxxxxxxx):`);
-    }
-
-    else if (userStates[sender]?.step === 'get_num') {
-        userStates[sender].target = text.includes('@c.us') ? text : `${text}@c.us`;
-        userStates[sender].step = 'get_cnt';
-        await client.sendMessage(sender, `කීයක් යැවිය යුතුද? (Count):`);
-    }
-
-    else if (userStates[sender]?.step === 'get_cnt') {
-        let count = parseInt(text) || 1;
-        let target = userStates[sender].target;
-        let body = (userStates[sender].file === 'cha') ? cha : xeontext3;
-
-        await client.sendMessage(sender, `මැසේජ් ${count} ක් යැවීම ආරම්භ කළා... 🚀`);
-        for (let i = 1; i <= count; i++) {
-            await client.sendMessage(target, media || body, media ? { caption: body } : {});
-            if (i < count) await new Promise(r => setTimeout(r, 2500));
-        }
-        await client.sendMessage(sender, `✅ සියල්ල සාර්ථකව යවා අවසන්!`);
-        delete userStates[sender];
     }
 });
 
-client.initialize();
+// බොට් ස්ටාර්ට් කිරීම සහ Pairing Code වැඩේ
+async function startBot() {
+    console.log("බොට් පණගන්වනවා... කරුණාකර රැඳී සිටින්න.");
+    client.initialize();
+
+    setTimeout(async () => {
+        // සෙෂන් එකක් සේව් වෙලා නැත්නම් විතරක් Pairing Code එක අහනවා
+        if (!client.pupPage) {
+            const phoneNumber = await askQuestion('\nWhatsApp නම්බර් එක ලබා දෙන්න (උදා: 94741234567): ');
+            const code = await client.requestPairingCode(phoneNumber);
+            console.log(`\n🔑 ඔයාගේ Pairing Code එක: ${code}`);
+            console.log("WhatsApp -> Linked Devices -> Link with phone number එකට ගොස් මෙම කෝඩ් එක ඇතුළත් කරන්න.\n");
+        }
+    }, 8000);
+}
+
+startBot();
