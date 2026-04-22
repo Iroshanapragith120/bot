@@ -1,7 +1,5 @@
-const fs = require('fs');
-
 module.exports = {
-    OWNER_NUMBER: "94712345678", // ඔයාගේ ප්‍රධාන අංකය
-    OWNERS: ["94712345678", "94770000000"], // මෙතනට ඕනම Owner කෙනෙක් ඇඩ් කරන්න පුළුවන්
+    OWNER_NUMBER: "94741433513", // මෙතනට උඹේ නම්බර් එක විතරක් දාපන් (Prefix නැතුව)
     PREFIX: ".",
+    SESSION_DATA: "./setting"
 };
