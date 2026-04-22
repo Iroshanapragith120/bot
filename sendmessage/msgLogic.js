@@ -6,7 +6,7 @@ async function handleMessageSend(client, chatID, text, userStates) {
         let state = userStates[chatID];
         if (!state) return;
 
-        // පියවර 1: Main Menu එකෙන් 1 තේරුවම Message Send Menu පෙන්වීම
+        // පියවර 1: Main Menu එකේ '1' එබුවම එන පණිවිඩය
         if (state.step === 'main' && text === '1') {
             state.step = 'choose_file';
             let msg = `*📩 MESSAGE SEND MENU*\n\n` +
@@ -17,7 +17,7 @@ async function handleMessageSend(client, chatID, text, userStates) {
             return;
         }
 
-        // පියවර 2: යවන මැසේජ් එක (File) තෝරා ගැනීම
+        // පියවර 2: File එක තේරීම
         if (state.step === 'choose_file') {
             if (text === '1' || text === '2') {
                 state.selectedFile = (text === '1') ? 'cha' : 'xeontext3';
@@ -29,10 +29,10 @@ async function handleMessageSend(client, chatID, text, userStates) {
             return;
         }
 
-        // පියවර 3: Target අංකය ලබා ගැනීම
+        // පියවර 3: අංකය ලබා ගැනීම
         if (state.step === 'ask_number') {
             let targetNum = text.replace(/[+-\s]/g, '');
-            if (targetNum.length < 10) {
+            if (targetNum.length < 9) {
                 await client.sendMessage(chatID, "❌ අංකය වැරදියි. නැවත ලබා දෙන්න:");
                 return;
             }
@@ -42,7 +42,7 @@ async function handleMessageSend(client, chatID, text, userStates) {
             return;
         }
 
-        // පියවර 4: Count එක ගෙන මැසේජ් යැවීම ආරම්භ කිරීම
+        // පියවර 4: වාර ගණන ගෙන වැඩේ පටන් ගැනීම
         if (state.step === 'ask_count') {
             let count = parseInt(text);
             if (isNaN(count) || count <= 0) {
@@ -50,9 +50,27 @@ async function handleMessageSend(client, chatID, text, userStates) {
                 return;
             }
 
-            // වැඩේ පටන් ගන්නවා - State එක අයින් කරනවා ඊළඟට මැසේජ් logic එකට නොවදින්න
             let finalTarget = state.target;
             let finalBody = (state.selectedFile === 'cha') ? cha : xeontext3;
+
+            // වැඩේ පටන් ගන්න කලින් state එක clear කරනවා loop නොවෙන්න
             delete userStates[chatID]; 
 
-            await client.sendMessage(chatID, `🚀 ${finalTarget} වෙත මැසේජ් ${count} ක් යැවීම ආර
+            await client.sendMessage(chatID, `🚀 ${finalTarget} වෙත මැසේජ් ${count} ක් යැවීම ආරම්භ කළා...`);
+
+            for (let i = 1; i <= count; i++) {
+                try {
+                    await client.sendMessage(finalTarget, finalBody);
+                    await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5s delay
+                } catch (e) { console.log("Error sending message " + i); }
+            }
+
+            await client.sendMessage(chatID, `✅ මැසේජ් ${count} ම සාර්ථකව යවා අවසන්!`);
+        }
+    } catch (err) {
+        console.error(err);
+        delete userStates[chatID];
+    }
+}
+
+module.exports = { handleMessageSend };
