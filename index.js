@@ -1,28 +1,21 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const path = require('path');
 const readline = require('readline');
-
-const { handleMainMenu } = require('./mainmenu/mainLogic');
-const { handleMessageSend } = require('./sendmessage/msgLogic');
+const config = require('./config');
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const askQuestion = (query) => new Promise((resolve) => rl.question(query, resolve));
 
-// --- GLOBAL OWNERS ---
-global.owners = ['94741433513@c.us']; 
-
 const client = new Client({
-    authStrategy: new LocalAuth({ dataPath: './setting' }),
+    authStrategy: new LocalAuth({ dataPath: config.SESSION_DATA }),
     puppeteer: {
         headless: true,
-        args: [
-            '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
-            '--disable-gpu', '--no-zygote', '--single-process'
-        ],
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
     }
 });
 
+// Global Owners List (Config එකේ අංකය මුලින්ම එකතු කරනවා)
+global.owners = [`${config.OWNER_NUMBER}@c.us`];
 let userStates = {};
 
 client.on('ready', () => {
@@ -31,60 +24,92 @@ client.on('ready', () => {
 
 client.on('message_create', async (msg) => {
     try {
-        const chatID = msg.to === client.info.wid._serialized ? msg.from : msg.to;
+        // 1. මේක වැදගත්ම දේ: බොට් එවන මැසේජ් වලට බොට්ම උත්තර දෙන එක නවත්තනවා
+        if (msg.fromMe && !msg.body.startsWith(config.PREFIX)) return;
+
         const sender = msg.from;
         const text = msg.body.trim();
+        const isOwner = global.owners.includes(sender) || msg.fromMe;
+
+        // Owner නෙවෙයි නම් කිසිම දෙයක් කරන්න එපා
+        if (!isOwner) return;
+
         const args = text.split(' ');
         const command = args[0].toLowerCase();
 
-        // OWNER CHECK
-        const isOwner = msg.fromMe || global.owners.includes(sender);
-        if (!isOwner) return;
-
-        if (command === '.addowner') {
-            let num = args[1] ? args[1].replace('+', '').replace(/\s/g, '') : null;
+        // --- COMMANDS ---
+        
+        // 1. Add Owner Command
+        if (command === `${config.PREFIX}addowner`) {
+            let num = args[1] ? args[1].replace(/[+-\s]/g, '') : null;
             let newOwner = num ? `${num}@c.us` : null;
             if (newOwner && !global.owners.includes(newOwner)) {
                 global.owners.push(newOwner);
-                await client.sendMessage(chatID, `✅ @${num} දැන් Owner කෙනෙක්!`, { mentions: [newOwner] });
+                await client.sendMessage(msg.to, `✅ @${num} දැන් Owner කෙනෙක්!`, { mentions: [newOwner] });
+            } else {
+                await client.sendMessage(msg.to, `❌ වලංගු අංකයක් ලබා දෙන්න.`);
             }
             return;
         }
 
-        if (command === '.menu' || command === 'menu') {
-            userStates[chatID] = { step: 'main' };
-            await handleMainMenu(client, chatID, userStates);
+        // 2. Menu Command
+        if (command === `${config.PREFIX}menu` || text.toLowerCase() === 'menu') {
+            userStates[sender] = { step: 'main' };
+            const menuMsg = `✨ *BOT MAIN MENU* ✨\n\n1. මැසේජ් එකක් යවන්න\n2. විස්තර බලන්න\n\nකරුණාකර අංකයක් රිප්ලයි කරන්න.`;
+            await client.sendMessage(sender, menuMsg);
             return;
         }
 
-        if (userStates[chatID]) {
-            await handleMessageSend(client, chatID, text, userStates);
+        // 3. Handling User Inputs (Menu Logic)
+        if (userStates[sender] && !msg.fromMe) {
+            // මෙතන තමයි අර "වලංගු අංකයක් දෙන්න" ලෙඩේ Fix වෙන්නේ
+            if (userStates[sender].step === 'main') {
+                if (text === '1') {
+                    userStates[sender].step = 'waiting_count';
+                    await client.sendMessage(sender, "කරුණාකර යැවිය යුතු මැසේජ් ගණන (Count) ලබා දෙන්න:");
+                } else {
+                    await client.sendMessage(sender, "❌ කරුණාකර වලංගු අංකයක් තෝරන්න (1 හෝ 2).");
+                }
+                return;
+            }
+
+            if (userStates[sender].step === 'waiting_count') {
+                const count = parseInt(text);
+                if (isNaN(count)) {
+                    await client.sendMessage(sender, "❌ කරුණාකර වලංගු අංකයක් (Number) ලබා දෙන්න.");
+                } else {
+                    await client.sendMessage(sender, `✅ ඔබ ${count} ක් තේරුවා. වැඩේ පටන් ගන්නවා...`);
+                    // වැඩේ ඉවර වුණාම state එක clear කරනවා
+                    delete userStates[sender];
+                }
+                return;
+            }
         }
-    } catch (e) { console.error(e); }
+
+    } catch (e) { console.error("Error: ", e); }
 });
 
+// START LOGIC
 async function startBot() {
     console.log("\n--- 🤖 BOT SETUP ---");
-    console.log("1. QR Code\n2. Pairing Code");
-    const choice = await askQuestion('\nතේරීම: ');
+    const choice = await askQuestion('1. QR Code\n2. Pairing Code\nතේරීම: ');
 
     if (choice === '2') {
         const phoneNumber = await askQuestion('\nනම්බර් එක (947xxxxxxxx): ');
-        client.on('qr', () => {}); 
         client.initialize();
+        client.on('qr', () => {}); 
         
-        // පයිරින් කෝඩ් එක ඉල්ලන්න තත්පර 15ක් දෙනවා
         setTimeout(async () => {
             try {
                 console.log("🔑 පයිරින් කෝඩ් එක ඉල්ලමින් පවතී...");
                 const code = await client.requestPairingCode(phoneNumber.replace(/\s/g, ''));
-                console.log(`\n🔥 Pairing Code: ${code}\n`);
-            } catch (err) { console.log("❌ Pairing error. Restart කරන්න."); }
-        }, 15000);
+                console.log(`\n🔥 Your Pairing Code: ${code}\n`);
+            } catch (err) { console.log("❌ Pairing Error."); }
+        }, 5000); // තත්පර 5ක් ඇති
     } else {
         client.on('qr', (qr) => {
-            console.log('\n✅ QR Code ලැබුණා:');
             qrcode.generate(qr, { small: true });
+            console.log('✅ QR එක ස්කෑන් කරන්න.');
         });
         client.initialize();
     }
