@@ -1,26 +1,13 @@
-const { MessageMedia } = require('whatsapp-web.js');
-const path = require('path');
+async function handleMainMenu(client, chatID, userStates) {
+    userStates[chatID] = { step: 'main' };
+    
+    let menuMsg = `*--- 🤖 MAIN MENU ---*\n\n` +
+                  `1. 📩 Message Send Menu\n` +
+                  `2. ⚙️ Work Mode (Public/Private)\n\n` +
+                  `*වර්තමාන මෝඩ් එක:* ${global.workMode.toUpperCase()}\n\n` +
+                  `*අංකය රිප්ලයි කරන්න:*`;
 
-async function handleMainMenu(client, sender, userStates) {
-    try {
-        // State එක මුලින්ම 'main' පියවරට සෙට් කරනවා
-        userStates[sender] = { step: 'main' };
-        
-        const imagePath = path.join(__dirname, '../image', 'README.jpg');
-        let media;
-        try { media = MessageMedia.fromFilePath(imagePath); } catch (e) { media = null; }
-
-        let mainMenu = `*--- 🤖 MAIN MENU ---*\n\n` +
-                       `1. 📩 Message Send Menu\n` +
-                       `2. 🔐 Owners Menu\n\n` +
-                       `*අංකය රිප්ලයි කරන්න:*`;
-
-        if (media) {
-            await client.sendMessage(sender, media, { caption: mainMenu });
-        } else {
-            await client.sendMessage(sender, mainMenu);
-        }
-    } catch (e) { console.log(e); }
+    await client.sendMessage(chatID, menuMsg);
 }
 
 module.exports = { handleMainMenu };
