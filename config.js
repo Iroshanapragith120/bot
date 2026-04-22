@@ -1,5 +1,5 @@
 module.exports = {
-    OWNER_NUMBER: "94741433513", // මෙතනට උඹේ නම්බර් එක විතරක් දාපන් (Prefix නැතුව)
+    OWNER_NUMBER: "94741433513", 
     PREFIX: ".",
-    SESSION_DATA: "./setting"
+    WORK_MODE: "private" // default private තියෙන්නේ
 };
