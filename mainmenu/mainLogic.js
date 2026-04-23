@@ -1,13 +1,34 @@
-async function handleMainMenu(client, chatID, userStates) {
-    userStates[chatID] = { step: 'main' };
-    
-    let menuMsg = `*--- 🤖 MAIN MENU ---*\n\n` +
-                  `1. 📩 Message Send Menu\n` +
-                  `2. ⚙️ Work Mode (Public/Private)\n\n` +
-                  `*වර්තමාන මෝඩ් එක:* ${global.workMode.toUpperCase()}\n\n` +
-                  `*අංකය රිප්ලයි කරන්න:*`;
+const { MessageMedia } = require('whatsapp-web.js');
+const path = require('path');
+const fs = require('fs');
 
-    await client.sendMessage(chatID, menuMsg);
+async function handleMainMenu(client, chatID, userStates) {
+    try {
+        userStates[chatID] = { step: 'main' };
+        
+        // පින්තූරය තියෙන තැන (උඹේ ෆෝල්ඩර් එකට අනුව චෙක් කරගනින්)
+        const imagePath = path.join(__dirname, '../image/README.jpg');
+        let media = null;
+
+        if (fs.existsSync(imagePath)) {
+            media = MessageMedia.fromFilePath(imagePath);
+        }
+
+        let menuMsg = `*--- 🤖 MAIN MENU ---*\n\n` +
+                      `1. 📩 Message Send Menu\n` +
+                      `2. ⚙️ Work Mode (Public/Private)\n\n` +
+                      `*Current Mode:* ${global.workMode.toUpperCase()}\n\n` +
+                      `*අංකය රිප්ලයි කරන්න:*`;
+
+        if (media) {
+            await client.sendMessage(chatID, media, { caption: menuMsg });
+        } else {
+            await client.sendMessage(chatID, menuMsg);
+        }
+    } catch (e) {
+        console.error("Menu Error:", e);
+        await client.sendMessage(chatID, "❌ මෙනූ එක පෙන්වීමේ දෝෂයක්!");
+    }
 }
 
 module.exports = { handleMainMenu };
