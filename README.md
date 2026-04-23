@@ -10,9 +10,10 @@
 
 1.  Repository එක Clone කරන්න:
     ```bash
-    git clone [https://github.com/Iroshanapragith120/bot.git](https://github.com/Iroshanapragith120/bot.git)
+    git clone https://github.com/Iroshanapragith120/bot.git
+*
+ ```bash
     cd bot
-    ```
 
 2.  අවශ්‍ය Libraries Install කරන්න:
     ```bash
