@@ -1,11 +1,15 @@
 {
-  "name": "my-whatsapp-bot",
+  "name": "podda-md",
   "version": "1.0.0",
-  "description": "Fixed WhatsApp Bot",
+  "description": "Stable WhatsApp Bot",
   "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "whatsapp-web.js": "^1.23.0",
     "qrcode-terminal": "^0.12.0",
+    "qrcode": "^1.5.3",
     "pino": "^8.0.0"
   }
 }
